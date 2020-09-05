@@ -1,4 +1,4 @@
-# Lab 1 write-up
+# Lab 2 write-up
 
 ## Console and Cloud Shell
 
