@@ -1,56 +1,102 @@
 # Lab 2 write-up
 
-## Console and Cloud Shell
+## Working with Virtual Machines
 
 ### Task 1 : Get access to Google Cloud.
  From command line(Windows), BASH(linux), run  the following command to initialize gcloud and  press Y to login when prompted. 
 
  `gcloud init`
 
-### Task 2 : Create a Cloud Storage bucket using the Cloud Console. (command line version)
-This command creates a bucket in US multi-region with Standard storage class
+### Task 2 : Create the VM using the Cloud Console. (command line version)
+This command creates a VM called mc-server in us-central1 region us-central1-a zone with default service account with scopes:
+- service control enabled
+- service management
+- stack driver logging write only
+- stack driver monitoring write only
+- stack trace and
+- cloud storage read and write
 
-`gsutil mb -l US gs://gads-lab-1`
+  with tag minecrast-server, image debian 9 stretch 2020 edition, boot disk space 10GB SSD
 
-### Task 3 : Create a second Cloud Storage bucket using Cloud Shell.
+`gcloud compute instances create mc-server --zone=us-central1-a --machine-type=n1-standard-1 --service-account=704908768855-compute@developer.gserviceaccount.com --scopes=service-control,service-management,logging-write,monitoring-write,trace,storage-rw  --tags=minecraft-server --image=debian-9-stretch-v20200902 --image-project=debian-cloud --boot-disk-size=10GB --boot-disk-type=pd-ssd --boot-disk-device-name=mc-server-ip --create-disk=mode=rw,size=50,type=projects/qwiklabs-gcp-00-23d9e9d45b01/zones/us-central1-a/diskTypes/pd-ssd,name=minecraft-disk,device-name=minecraft-disk --reservation-affinity=any
+`
 
-`gsutil mb gs://gads-lab-test`
+### Task 3 : Prepare the data disk
+- Command creates a directory that serves as the mount point for the data disk
+`sudo mkdir -p /home/minecraft`
 
-### Task 4: copy a file called `credentials.json` from working directory to second bucket
-`gsutil cp credentials.json gs://gads-lab-test`
+- Command formats the disk to ext4 file system
+`sudo mkfs.ext4 -F -E lazy_itable_init=0,\
+lazy_journal_init=0,discard \
+/dev/disk/by-id/google-minecraft-disk`
 
-### Task 5: Create a persistent state in Cloud Shell
-- Create Environment variable for Region
-`export INFRACLASS_REGION=us-central1`
+- Command mounts the disk
+`sudo mount -o discard,defaults /dev/disk/by-id/google-minecraft-disk /home/minecraft`
 
-- Create a new directory and a file for configuration
+### Task 4: Install and run the application
+- In the SSH terminal for mc-server, this command updates the Debian repositories on the VM
+`sudo apt-get update`
 
-`mkdir infraclass`
+- Commands installs the headless JRE, navigate to mount directory and install wget followed by minecraft server
+`sudo apt-get install -y default-jre-headless
+cd /home/minecraft
+sudo apt-get install wget
+sudo wget https://launcher.mojang.com/v1/objects/d0d0fe2b1dc6ab4c65554cb734270872b72dadd6/server.jar`
 
-`touch infraclass/config`
+- command initializes minecraft server
+`sudo java -Xmx1024M -Xms1024M -jar server.jar nogui`
 
-- Append region environment variable to config file
+#### Note: The Minecraft server won't run unless you accept the terms of the End User Licensing Agreement (EULA).
 
-`echo INFRACLASS_REGION=$INFRACLASS_REGION >> ~/infraclass/config`
+- this command `sudo nano eula.txt` open eula file 
+Manually change `eula=false` to `eula=true`
 
-- Create Environment variable for project
-`export INFRACLASS_PROJECT_ID=my-project-version-9874`
+- To create a virtual terminal screen to start minecrast server, this command installs screen following by it's initialization
+`sudo apt-get install -y screen
+sudo screen -S mcs java -Xmx1024M -Xms1024M -jar server.jar nogui`
 
-- Append project environment variable to config file
-`echo INFRACLASS_PROJECT_ID=$INFRACLASS_PROJECT_ID >> ~/infraclass/config`
+- Command detaches the screen and exits ssh
+`sudo screen -r mcs
+exit`
 
-- set the environment variables
-`source infraclass/config`
 
-#### Test: close shell, reopen and test to see if environment variables are maintained.
-`exit`
+- Command creates a firewall rule called minecraft-rule which allows ingress tcp traffic on port 25565 with tag minecraft-server with source ranges 0.0.0.0/0
+`gcloud compute --project=qwiklabs-gcp-00-23d9e9d45b01 firewall-rules create minecraft-rule --direction=INGRESS --priority=1000 --network=default --action=ALLOW --rules=tcp:25565 --source-ranges=0.0.0.0/0 --target-tags=minecraft-server`
 
-`echo $INFRACLASS_PROJECT_ID`
 
-- Edit .profile file by adding this at end of file content
-`source infraclass/config`
+### Task 5: Schedule regular backups
 
+- In mc-server ssh terminl, command creates env variable, a bucket, navigates to home directory and  creates a script
+`export YOUR_BUCKET_NAME=my-bucket
+gsutil mb gs://$YOUR_BUCKET_NAME-minecraft-backup
+cd /home/minecraft
+sudo nano /home/minecraft/backup.sh`
+
+This is the content of the script
+```
+    #!/bin/bash
+    screen -r mcs -X stuff '/save-all\n/save-off\n'
+    /usr/bin/gsutil cp -R ${BASH_SOURCE%/*}/world gs://${YOUR_BUCKET_NAME}-minecraft-backup/$(date "+%Y%m%d-%H%M%S")-world
+    screen -r mcs -X stuff '/save-on\n'
+```
+
+- Command makes the script executable and runs it
+
+`sudo chmod 755 /home/minecraft/backup.sh`
+
+`. /home/minecraft/backup.sh`
+
+- Open cron table and append the instruction to run backups every 4 hours
+
+`sudo crontab -e`
+Instruction to paste in file: `0 */4 * * * /home/minecraft/backup.sh`
+
+- Command stops screen service
+`sudo screen -r -X stuff '/stop\n'`
+
+- Command adds startup and shutdown scripts to VM
+`gcloud compute instances add-metadata mc-server --metadata=startup-script-url=https://storage.googleapis.com/cloud-training/archinfra/mcserver/startup.sh,shutdown-script-url=https://storage.googleapis.com/cloud-training/archinfra/mcserver/shutdown.sh`
 
 
 #### Completion of the lab produced the following result. 
-![Image of lab 1](screenshots/console-and-cloud-shell.png)
+![Image of lab 2](screenshots/working-with-virtual-machines.png)

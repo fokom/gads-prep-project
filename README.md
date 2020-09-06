@@ -9,21 +9,21 @@ The first 3 labs have full code documentations alongside them with prove of lab 
 ## Contents
 
 ### Lab 1: Console and cloud shell
-[Console & Shell translation](screenshots-and-documentation/screenshots/lab1_readme.md)
+[Console & Shell translation](screenshots-and-documentation/lab1_readme.md)
 
-![Console and Shell screenshot](screenshots-and-documentation/screenshots/console-and-cloud-shell.png)
+![Console & Shell screenshot](screenshots-and-documentation/screenshots/console-and-cloud-shell.png)
 
 
 
 ### Lab 2: Working with Virtual Machines
-_Working with Virtual Machines Translation_: screenshots-and-documentation/screenshots/lab2_readme.md
+[Working with Virtual Machines Translation](screenshots-and-documentation/lab2_readme.md)
 
 ![Working with Virtual Machines screenshot](screenshots-and-documentation/screenshots/working-with-virtual-machines.png)
 
 
 
 ### Lab 3: Creating Virtual Machines
-_Creating Virtual Machines Translation_: screenshots-and-documentation/screenshots/lab3_readme.md
+[Creating Virtual Machines Translation](screenshots-and-documentation/lab3_readme.md)
 
 ![Creating Virtual Machines screenshot](screenshots-and-documentation/screenshots/creating-virtual-machines.png)
 
